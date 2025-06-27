@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+  </head>
+  <body>
+    <h1>予定の否認</h1>
+    <p>否認理由を入力してください。</p>
+    <form action="<?= ScriptApp.getService().getUrl() ?>" method="post">
+      <input type="hidden" name="row" value="<?= row ?>">
+      <textarea name="rejectionReason" rows="4" cols="50"></textarea>
+      <br>
+      <input type="submit" value="送信">
+    </form>
+  </body>
+</html>
