@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <title>予定を拒否 - 理由を入力</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        color: #333;
+      }
+      .container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      h1 {
+        color: #dc3545;
+        margin-top: 0;
+        font-size: 24px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+      }
+      .form-group {
+        margin-bottom: 20px;
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+      }
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: vertical;
+      }
+      .button-group {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+      }
+      .btn {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+      }
+      .btn-cancel {
+        background-color: #6c757d;
+        color: white;
+      }
+      .btn-submit {
+        background-color: #dc3545;
+        color: white;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .required {
+        color: #dc3545;
+        margin-left: 4px;
+      }
+      .help-text {
+        font-size: 12px;
+        color: #6c757d;
+        margin-top: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>予定を拒否</h1>
+      <p>以下の予定を拒否します。拒否理由を入力してください。</p>
+      
+      <div class="event-details" style="background-color: #f1f1f1; padding: 15px; border-radius: 4px; margin: 15px 0;">
+        <p><strong>イベント名:</strong> <?= eventTitle ?></p>
+        <p><strong>日時:</strong> <?= eventDate ?></p>
+        <p><strong>申請者:</strong> <?= applicantEmail ?></p>
+      </div>
+      
+      <form id="rejectionForm">
+        <input type="hidden" name="action" value="reject">
+        <input type="hidden" name="row" value="<?= row ?>">
+        
+        <div class="form-group">
+          <label for="rejectionReason">
+            拒否理由 <span class="required">*</span>
+            <span class="help-text">申請者に表示されるため、具体的な理由を記入してください。</span>
+          </label>
+          <textarea 
+            id="rejectionReason" 
+            name="rejectionReason" 
+            required
+            placeholder="例: 会議室が既に予約済みのため、別の日時を検討してください。"
+          ></textarea>
+        </div>
+        
+        <div class="button-group">
+          <a href="#" class="btn btn-cancel" onclick="window.close(); return false;">キャンセル</a>
+          <button type="submit" class="btn btn-submit">拒否を確定</button>
+        </div>
+      </form>
+    </div>
+    
+    <script>
+      // フォーム送信処理
+      document.getElementById('rejectionForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const form = e.target;
+        const formData = new FormData(form);
+        const formDataObj = {};
+        
+        // FormDataをオブジェクトに変換
+        formData.forEach((value, key) => {
+          formDataObj[key] = value;
+        });
+        
+        // フォームデータを送信
+        google.script.run
+          .withSuccessHandler(handleSuccess)
+          .withFailureHandler(handleError)
+          .doPost(formDataObj);
+      });
+      
+      // 送信成功時の処理
+      function handleSuccess(response) {
+        // 成功メッセージを表示（実際にはdoPostから返されるHTMLが表示される）
+        document.body.innerHTML = response;
+      }
+      
+      // エラー発生時の処理
+      function handleError(error) {
+        alert('エラーが発生しました: ' + error.message);
+        console.error('Error:', error);
+      }
+    </script>
+  </body>
+</html>
