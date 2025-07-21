@@ -86,38 +86,75 @@ function doPost(e) {
  * @return {GoogleAppsScript.HTML.HtmlOutput} HTMLレスポンス
  */
 function handleApproveAction(row) {
-  if (!row || isNaN(row)) {
-    return createErrorResponse('無効なリクエストパラメータです。', 400);
-  }
-  
-  const result = approveEvent(row);
-  
-  if (result.success) {
-    return HtmlService.createHtmlOutput(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <base target="_top">
-          <meta charset="UTF-8">
-          <title>予定を承認しました</title>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .success { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 4px; }
-            .btn { display: inline-block; padding: 8px 16px; background-color: #007bff; color: white; text-decoration: none; border-radius: 4px; margin-top: 10px; }
-            .btn:hover { background-color: #0056b3; }
-          </style>
-        </head>
-        <body>
-          <div class="success">
-            <h2>✅ 予定を承認しました</h2>
-            <p>${result.message}</p>
-            ${result.eventUrl ? `<p><a href="${result.eventUrl}" target="_blank" class="btn">カレンダーで確認する</a></p>` : ''}
-          </div>
-        </body>
-      </html>
-    `);
-  } else {
-    return createErrorResponse(result.message, 500);
+  try {
+    if (!row || isNaN(row)) {
+      return createErrorResponse('無効なリクエストパラメータです。', 400);
+    }
+    
+    const result = approveEvent(row);
+    
+    if (result.success) {
+      const htmlOutput = HtmlService.createHtmlOutput(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <base target="_top">
+            <meta charset="UTF-8">
+            <title>予定を承認しました</title>
+            <style>
+              body { 
+                font-family: 'Arial', 'Meiryo', sans-serif; 
+                line-height: 1.6; 
+                max-width: 600px; 
+                margin: 0 auto; 
+                padding: 20px; 
+              }
+              .success { 
+                color: #155724; 
+                background-color: #d4edda; 
+                border: 1px solid #c3e6cb; 
+                padding: 20px; 
+                border-radius: 4px; 
+                margin: 20px 0;
+              }
+              .btn { 
+                display: inline-block; 
+                padding: 10px 20px; 
+                background-color: #28a745; 
+                color: white; 
+                text-decoration: none; 
+                border-radius: 4px; 
+                margin-top: 15px;
+                font-weight: bold;
+              }
+              .btn:hover { 
+                background-color: #218838;
+                text-decoration: none;
+              }
+              h2 { 
+                margin-top: 0; 
+                color: #155724;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="success">
+              <h2>✅ 予定を承認しました</h2>
+              <p>${result.message}</p>
+              ${result.eventUrl ? `<p><a href="${result.eventUrl}" target="_blank" class="btn">カレンダーで確認する</a></p>` : ''}
+            </div>
+            <p><a href="${ScriptApp.getService().getUrl()}">トップに戻る</a></p>
+          </body>
+        </html>
+      `);
+      
+      return htmlOutput;
+    } else {
+      return createErrorResponse(result.message, 500);
+    }
+  } catch (error) {
+    console.error('承認処理中にエラーが発生しました:', error);
+    return createErrorResponse('承認処理中にエラーが発生しました。', 500);
   }
 }
 
