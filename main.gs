@@ -21,9 +21,22 @@ function getActiveSpreadsheet() {
  * フォーム送信時にトリガーされる
  * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e - フォーム送信イベント
  */
-function onFormSubmit(e) {
-  // 承認フローモジュールのonFormSubmitを呼び出す
-  onFormSubmitHandler(e);
+function createTrigger() {
+  // 既存のトリガーを削除
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'onFormSubmit') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // 新しいトリガーを作成
+  ScriptApp.newTrigger('onFormSubmit')
+    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+    .onFormSubmit()
+    .create();
+  
+  Logger.log('フォーム送信トリガーを設定しました');
 }
 
 /**

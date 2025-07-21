@@ -4,56 +4,90 @@
 
 /**
  * フォーム送信時に実行される関数
+ * スプレッドシートにはすでにフォームの回答が記録されているため、
+ * 編集用のIDを追加し、承認者にメールを送信する
  * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e - フォーム送信イベント
  */
 function onFormSubmit(e) {
   try {
-    // フォーム回答を取得
-    const formResponse = e.response;
-    if (!formResponse) {
-      throw new Error('フォームの回答を取得できませんでした。');
-    }
-
-    // スプレッドシートとアクティブシートを取得
     const sheet = e.range.getSheet();
     const row = e.range.getRow();
     
-    // フォーム回答をオブジェクトに変換
-    const formData = {
-      timestamp: new Date(),
-      applicantEmail: formResponse.getRespondentEmail() || 'guest@example.com',
-      title: formResponse.getItemResponses().find(r => r.getItem().getTitle() === 'イベント名')?.getResponse() || '（無題）',
-      startTime: formResponse.getItemResponses().find(r => r.getItem().getTitle() === '開始日時')?.getResponse(),
-      endTime: formResponse.getItemResponses().find(r => r.getItem().getTitle() === '終了日時')?.getResponse(),
-      location: formResponse.getItemResponses().find(r => r.getItem().getTitle() === '場所')?.getResponse() || '',
-      description: formResponse.getItemResponses().find(r => r.getItem().getTitle() === '説明')?.getResponse() || ''
-    };
-
-    // スプレッドシートにステータスを記録
-    sheet.getRange(row, COLUMNS.STATUS + 1).setValue(STATUS.PENDING);
-    sheet.getRange(row, COLUMNS.APPLICANT_EMAIL + 1).setValue(formData.applicantEmail);
-    
     // 編集用トークンを生成して保存
     const editToken = Utilities.getUuid();
+    
+    // ステータスを「承認待ち」に設定
+    sheet.getRange(row, COLUMNS.STATUS + 1).setValue(STATUS.PENDING);
+    // 編集用トークンを設定
     sheet.getRange(row, COLUMNS.EDIT_TOKEN + 1).setValue(editToken);
     
-    // 承認依頼メールを送信
-    const result = sendApprovalRequestEmail(formData, row);
+    // フォームの回答データを取得
+    const formData = getFormDataFromRow(sheet, row);
     
-    if (!result.success) {
-      throw new Error(result.message);
+    // 承認者にメールを送信
+    const emailResult = sendApprovalRequestEmail(formData, row);
+    
+    if (!emailResult.success) {
+      throw new Error(emailResult.message);
     }
     
-    console.log(`承認依頼を送信しました。行: ${row}, 申請者: ${formData.applicantEmail}`);
+    console.log(`フォーム回答を処理し、承認依頼メールを送信しました。行: ${row}`);
   } catch (error) {
     console.error('フォーム送信処理でエラーが発生しました:', error);
-    // エラーをスプレッドシートに記録
     if (e && e.range) {
       const sheet = e.range.getSheet();
       const row = e.range.getRow();
       sheet.getRange(row, COLUMNS.STATUS + 1).setValue(`エラー: ${error.message}`);
     }
   }
+}
+
+/**
+ * スプレッドシートの行からフォームデータを取得する
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - シートオブジェクト
+ * @param {number} row - 行番号
+ * @return {Object} フォームデータ
+ */
+function getFormDataFromRow(sheet, row) {
+  const data = sheet.getRange(row, 1, 1, COLUMNS.PARENT_ROW + 2).getValues()[0];
+  
+  // 日付と時刻を結合してDateオブジェクトを作成
+  const eventDate = new Date(data[COLUMNS.EVENT_DATE]);
+  const startTime = new Date(data[COLUMNS.START_TIME]);
+  const endTime = new Date(data[COLUMNS.END_TIME]);
+  
+  // 日付と時刻を結合
+  const startDateTime = new Date(
+    eventDate.getFullYear(),
+    eventDate.getMonth(),
+    eventDate.getDate(),
+    startTime.getHours(),
+    startTime.getMinutes()
+  );
+  
+  const endDateTime = new Date(
+    eventDate.getFullYear(),
+    eventDate.getMonth(),
+    eventDate.getDate(),
+    endTime.getHours(),
+    endTime.getMinutes()
+  );
+  
+  // チラシのURLをパブリックアクセス可能なURLに変換
+  const flyerUrl = data[COLUMNS.FLYER_URL] ? getPublicFileUrl(data[COLUMNS.FLYER_URL]) : '';
+  
+  return {
+    title: data[COLUMNS.EVENT_TITLE] || '（タイトルなし）',
+    startTime: startDateTime,
+    endTime: endDateTime,
+    eventDetails: data[COLUMNS.EVENT_DETAILS] || '',
+    applicantName: data[COLUMNS.FULL_NAME] || '匿名ユーザー',
+    applicantEmail: data[COLUMNS.EMAIL] || '',
+    affiliation: data[COLUMNS.AFFILIATION] || '',
+    participantCount: data[COLUMNS.PARTICIPANT_COUNT] || 0,
+    notes: data[COLUMNS.NOTES] || '',
+    flyerUrl: flyerUrl
+  };
 }
 
 /**

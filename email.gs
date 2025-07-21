@@ -3,14 +3,63 @@
  */
 
 /**
+ * ファイルをパブリックに共有可能なURLに変換する
+ * @param {string} fileUrl - ファイルのURL
+ * @return {string} 共有可能なURL
+ */
+function getPublicFileUrl(fileUrl) {
+  try {
+    if (!fileUrl) return '';
+    
+    // Google ドライブのファイルIDを抽出
+    const fileId = fileUrl.match(/[\w-]{25,}/);
+    if (!fileId) return fileUrl; // ファイルIDが取得できない場合は元のURLを返す
+    
+    const file = DriveApp.getFileById(fileId[0]);
+    
+    // すでに共有設定があるか確認
+    const access = file.getSharingAccess();
+    if (access !== DriveApp.Access.ANYONE_WITH_LINK && access !== DriveApp.Access.ANYONE) {
+      // 共有設定を「リンクを知っている全員」に変更
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    }
+    
+    return file.getUrl();
+  } catch (error) {
+    console.error('ファイルの共有設定中にエラーが発生しました:', error);
+    return fileUrl; // エラーが発生した場合は元のURLを返す
+  }
+}
+
+/**
+ * 承認者のメールアドレスを取得する
+ * @return {string} 承認者のメールアドレス
+ */
+function getApproverEmail() {
+  return PropertiesService.getScriptProperties().getProperty(PROPERTY_KEYS.APPROVER_EMAIL);
+}
+
+/**
+ * スクリプトの公開URLを取得する
+ * @return {string} スクリプトの公開URL
+ */
+function getScriptUrl() {
+  return PropertiesService.getScriptProperties().getProperty(PROPERTY_KEYS.SCRIPT_URL);
+}
+
+/**
  * 承認依頼メールを送信する
  * @param {Object} eventData - イベントデータ
- * @param {string} eventData.applicantEmail - 申請者のメールアドレス
- * @param {string} eventData.title - イベントタイトル
+ * @param {string} eventData.title - イベント名
  * @param {Date} eventData.startTime - 開始日時
  * @param {Date} eventData.endTime - 終了日時
- * @param {string} eventData.location - 場所
- * @param {string} eventData.description - 説明
+ * @param {string} eventData.eventDetails - イベント内容
+ * @param {string} eventData.applicantName - 申請者名
+ * @param {string} eventData.applicantEmail - 申請者のメールアドレス
+ * @param {string} eventData.affiliation - 所属
+ * @param {number} eventData.participantCount - 参加予定人数
+ * @param {string} eventData.notes - 備考
+ * @param {string} eventData.flyerUrl - チラシURL
  * @param {number} row - スプレッドシートの行番号
  * @return {Object} 送信結果
  */
@@ -26,6 +75,15 @@ function sendApprovalRequestEmail(eventData, row) {
     const rejectionUrl = `${scriptUrl}?action=${ACTIONS.REJECT}&row=${row}`;
     
     const subject = EMAIL.APPROVAL_REQUEST_SUBJECT;
+    
+    // チラシの表示（URLがある場合）
+    const flyerText = eventData.flyerUrl 
+      ? `【チラシ】
+${eventData.flyerUrl}
+
+` 
+      : '';
+    
     const body = `
 以下の予定登録の承認をお願いします。
 
@@ -35,15 +93,19 @@ ${eventData.title}
 【日時】
 ${formatDateTime(eventData.startTime)} 〜 ${formatDateTime(eventData.endTime)}
 
-【場所】
-${eventData.location || '未設定'}
+【イベント内容】
+${eventData.eventDetails || '特になし'}
 
-【説明】
-${eventData.description || '特になし'}
+【申請者情報】
+・氏名: ${eventData.applicantName}
+・メール: ${eventData.applicantEmail}
+・所属: ${eventData.affiliation || '未設定'}
+・参加予定人数: ${eventData.participantCount || '未設定'}名
 
-【申請者】
-${eventData.applicantEmail}
+【備考】
+${eventData.notes || '特になし'}
 
+${flyerText}
 以下のリンクから承認または拒否を行ってください。
 
 ✅ 承認する: ${approvalUrl}
