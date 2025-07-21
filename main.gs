@@ -218,16 +218,31 @@ function handleCancelAction(row, token) {
  * @return {GoogleAppsScript.HTML.HtmlOutput} HTMLレスポンス
  */
 function createErrorResponse(message, statusCode = 500) {
-  const output = HtmlService.createHtmlOutput(`
+  const htmlOutput = HtmlService.createHtmlOutput(`
     <!DOCTYPE html>
     <html>
       <head>
         <base target="_top">
         <meta charset="UTF-8">
-        <title>エラーが発生しました</title>
+        <title>エラー</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; }
-          .error { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 4px; }
+          body { 
+            font-family: 'Arial', 'Meiryo', sans-serif; 
+            line-height: 1.6; 
+            margin: 0; 
+            padding: 20px; 
+            max-width: 800px;
+            margin: 0 auto;
+          }
+          .error { 
+            color: #721c24; 
+            background-color: #f8d7da; 
+            border: 1px solid #f5c6cb; 
+            padding: 20px; 
+            border-radius: 4px; 
+            margin: 20px 0;
+          }
+          h2 { margin-top: 0; }
         </style>
       </head>
       <body>
@@ -235,13 +250,20 @@ function createErrorResponse(message, statusCode = 500) {
           <h2>⚠️ エラーが発生しました</h2>
           <p>${message}</p>
         </div>
+        <p><a href="${ScriptApp.getService().getUrl()}">トップに戻る</a></p>
       </body>
     </html>
   `);
   
-  output.setMimeType(ContentService.MimeType.HTML);
-  output.setTitle('エラー');
-  return output;
+  // ステータスコードを設定
+  if (statusCode) {
+    const response = {}
+    response[1] = statusCode;
+    response[0] = htmlOutput;
+    return response;
+  }
+  
+  return htmlOutput;
 }
 
 /**

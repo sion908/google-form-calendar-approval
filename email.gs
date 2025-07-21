@@ -40,14 +40,6 @@ function getApproverEmail() {
 }
 
 /**
- * スクリプトの公開URLを取得する
- * @return {string} スクリプトの公開URL
- */
-function getScriptUrl() {
-  return PropertiesService.getScriptProperties().getProperty(PROPERTY_KEYS.SCRIPT_URL);
-}
-
-/**
  * 承認依頼メールを送信する
  * @param {Object} eventData - イベントデータ
  * @param {string} eventData.title - イベント名
