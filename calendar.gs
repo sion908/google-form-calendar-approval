@@ -45,10 +45,14 @@ function createCalendarEvent(eventData, attendees = []) {
       }
     }
 
+    // イベントURLを構築
+    const eventId = event.getId().replace('@google.com', '');
+    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(event.getId())}&ctz=Asia/Tokyo`;
+    
     return {
       success: true,
-      eventId: event.getId().replace('@google.com', ''), // イベントIDからドメインを削除
-      eventUrl: event.getEventLink(),
+      eventId: eventId,
+      eventUrl: eventUrl,
       calendarName: calendar.getName(),
       message: 'カレンダーにイベントを作成しました。'
     };
@@ -96,10 +100,14 @@ function updateCalendarEvent(eventId, eventData) {
     if (eventData.location !== undefined) event.setLocation(eventData.location || '');
     if (eventData.description !== undefined) event.setDescription(eventData.description || '');
 
+    // イベントURLを構築
+    const eventId = event.getId().replace('@google.com', '');
+    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(event.getId())}&ctz=Asia/Tokyo`;
+    
     return {
       success: true,
-      eventId: event.getId().replace('@google.com', ''),
-      eventUrl: event.getEventLink(),
+      eventId: eventId,
+      eventUrl: eventUrl,
       message: 'カレンダーイベントを更新しました。'
     };
   } catch (error) {
