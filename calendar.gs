@@ -16,18 +16,25 @@
  */
 function createCalendarEvent(eventData, attendees = []) {
   try {
-    const calendarId = getCalendarId();
-    const calendar = CalendarApp.getCalendarById(calendarId);
+    // カレンダーを取得（カレンダーIDが設定されていない場合はデフォルトカレンダーを使用）
+    let calendar;
+    try {
+      const calendarId = getCalendarId();
+      calendar = CalendarApp.getCalendarById(calendarId);
+    } catch (e) {
+      // カレンダーIDが設定されていない場合はデフォルトカレンダーを使用
+      calendar = CalendarApp.getDefaultCalendar();
+    }
     
     if (!calendar) {
-      throw new Error('カレンダーが見つかりません。カレンダーIDを確認してください。');
+      throw new Error('カレンダーが見つかりません。');
     }
 
-    // イベントを作成
+    // イベントを作成（シンプルな形式で）
     const event = calendar.createEvent(
-      eventData.title,
+      eventData.title || '（タイトルなし）',
       new Date(eventData.startTime),
-      new Date(eventData.endTime),
+      new Date(eventData.endTime || eventData.startTime),
       {
         description: eventData.description || '',
         location: eventData.location || '',
@@ -36,18 +43,11 @@ function createCalendarEvent(eventData, attendees = []) {
       }
     );
 
-    // 主催者を設定
-    if (eventData.organizerEmail) {
-      try {
-        event.setGuestStatus(eventData.organizerEmail, CalendarApp.GuestStatus.OWNER);
-      } catch (e) {
-        console.warn('主催者の設定に失敗しました:', e.message);
-      }
-    }
-
+    // イベントIDを取得（@google.com の部分を削除）
+    const eventId = event.getId().replace(/@.*$/, '');
+    
     // イベントURLを構築
-    const eventId = event.getId().replace('@google.com', '');
-    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(event.getId())}&ctz=Asia/Tokyo`;
+    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(eventId)}&ctz=Asia/Tokyo`;
     
     return {
       success: true,
@@ -78,11 +78,18 @@ function createCalendarEvent(eventData, attendees = []) {
  */
 function updateCalendarEvent(eventId, eventData) {
   try {
-    const calendarId = getCalendarId();
-    const calendar = CalendarApp.getCalendarById(calendarId);
+    // カレンダーを取得（カレンダーIDが設定されていない場合はデフォルトカレンダーを使用）
+    let calendar;
+    try {
+      const calendarId = getCalendarId();
+      calendar = CalendarApp.getCalendarById(calendarId);
+    } catch (e) {
+      // カレンダーIDが設定されていない場合はデフォルトカレンダーを使用
+      calendar = CalendarApp.getDefaultCalendar();
+    }
     
     if (!calendar) {
-      throw new Error('カレンダーが見つかりません。カレンダーIDを確認してください。');
+      throw new Error('カレンダーが見つかりません。');
     }
 
     // イベントを取得
@@ -93,20 +100,31 @@ function updateCalendarEvent(eventId, eventData) {
 
     // イベントを更新
     if (eventData.title) event.setTitle(eventData.title);
-    if (eventData.startTime) event.setTime(
-      new Date(eventData.startTime),
-      eventData.endTime ? new Date(eventData.endTime) : event.getEndTime()
-    );
+    
+    // 日時の更新（開始日時と終了日時を個別に設定）
+    if (eventData.startTime) {
+      const startTime = new Date(eventData.startTime);
+      const endTime = eventData.endTime ? new Date(eventData.endTime) : event.getEndTime();
+      event.setTime(startTime, endTime);
+    } else if (eventData.endTime) {
+      // 終了日時のみ更新する場合
+      const startTime = event.getStartTime();
+      const endTime = new Date(eventData.endTime);
+      event.setTime(startTime, endTime);
+    }
+    
     if (eventData.location !== undefined) event.setLocation(eventData.location || '');
     if (eventData.description !== undefined) event.setDescription(eventData.description || '');
 
+    // イベントIDを取得（@google.com の部分を削除）
+    const updatedEventId = event.getId().replace(/@.*$/, '');
+    
     // イベントURLを構築
-    const eventId = event.getId().replace('@google.com', '');
-    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(event.getId())}&ctz=Asia/Tokyo`;
+    const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(updatedEventId)}&ctz=Asia/Tokyo`;
     
     return {
       success: true,
-      eventId: eventId,
+      eventId: updatedEventId,
       eventUrl: eventUrl,
       message: 'カレンダーイベントを更新しました。'
     };

@@ -166,3 +166,5 @@ function setupSpreadsheet() {
 
 
 https://qiita.com/ume3003/items/cd9d05dff014952a73f8
+
+https://script.google.com/macros/s/AKfycbxeL9ilgqibJQqEZMkTrFaxO6SaRPmG67SfXd7KY3bAniLlR7U/exec?action=approve&row=4

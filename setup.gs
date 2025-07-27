@@ -86,4 +86,3 @@ function createTrigger() {
 
     Logger.log('フォーム送信トリガーを設定しました');
 }
-
