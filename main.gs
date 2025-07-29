@@ -168,8 +168,19 @@ function handleRejectAction(row) {
     return createErrorResponse('無効なリクエストパラメータです。', 400);
   }
   
+  // スプレッドシートからイベント情報を取得
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const data = sheet.getRange(row, 1, 1, COLUMNS.PARENT_ROW + 2).getValues()[0];
+  
+  // テンプレートに渡すデータを準備
+  const template = HtmlService.createTemplateFromFile('rejection_form_template');
+  template.eventTitle = data[COLUMNS.EVENT_TITLE] || '（タイトルなし）';
+  template.eventDate = formatDateTime(data[COLUMNS.START_TIME]) + ' 〜 ' + formatDateTime(data[COLUMNS.END_TIME]);
+  template.applicantEmail = data[COLUMNS.APPLICANT_EMAIL] || '（メールアドレスなし）';
+  template.row = row; // 行番号もテンプレートに渡す
+  
   // 拒否理由入力フォームを表示
-  return HtmlService.createTemplateFromFile('rejection_form_template')
+  return template
     .evaluate()
     .setTitle('予定を拒否 - 理由を入力')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');

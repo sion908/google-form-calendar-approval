@@ -135,7 +135,7 @@
         google.script.run
           .withSuccessHandler(handleSuccess)
           .withFailureHandler(handleError)
-          .doPost(formDataObj);
+          .handleRejectSubmit(formDataObj.row, formDataObj.rejectionReason);
       });
       
       // 送信成功時の処理
