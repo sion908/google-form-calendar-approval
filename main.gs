@@ -169,7 +169,7 @@ function handleRejectAction(row) {
   }
   
   // 拒否理由入力フォームを表示
-  return HtmlService.createTemplateFromFile('rejection-form-template')
+  return HtmlService.createTemplateFromFile('rejection_form_template')
     .evaluate()
     .setTitle('予定を拒否 - 理由を入力')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
