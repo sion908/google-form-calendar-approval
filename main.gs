@@ -174,10 +174,17 @@ function handleRejectAction(row) {
   
   // テンプレートに渡すデータを準備
   const template = HtmlService.createTemplateFromFile('rejection_form_template');
-  template.eventTitle = data[COLUMNS.EVENT_TITLE] || '（タイトルなし）';
-  template.eventDate = formatDateTime(data[COLUMNS.START_TIME]) + ' 〜 ' + formatDateTime(data[COLUMNS.END_TIME]);
-  template.applicantEmail = data[COLUMNS.APPLICANT_EMAIL] || '（メールアドレスなし）';
-  template.row = row; // 行番号もテンプレートに渡す
+  
+  // テンプレート変数を設定
+  const templateVars = {
+    eventTitle: data[COLUMNS.EVENT_TITLE] || '（タイトルなし）',
+    eventDate: formatDateTime(data[COLUMNS.START_TIME]) + ' 〜 ' + formatDateTime(data[COLUMNS.END_TIME]),
+    applicantEmail: data[COLUMNS.APPLICANT_EMAIL] || '（メールアドレスなし）',
+    row: row
+  };
+  
+  // テンプレート変数を設定
+  Object.assign(template, templateVars);
   
   // 拒否理由入力フォームを表示
   return template
