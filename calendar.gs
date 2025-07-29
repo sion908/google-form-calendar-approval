@@ -49,11 +49,20 @@ function createCalendarEvent(eventData, attendees = []) {
     // イベントURLを構築
     const eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(eventId)}&ctz=Asia/Tokyo`;
     
+    // デバッグ用にイベントオブジェクトの情報をログに出力
+    console.log('Created calendar event:', {
+      id: eventId,
+      url: eventUrl,
+      calendar: calendar.getName(),
+      eventMethods: Object.getOwnPropertyNames(Object.getPrototypeOf(event)).filter(prop => typeof event[prop] === 'function')
+    });
+    
     return {
       success: true,
       eventId: eventId,
       eventUrl: eventUrl,
       calendarName: calendar.getName(),
+      event: event, // イベントオブジェクトも返す
       message: 'カレンダーにイベントを作成しました。'
     };
   } catch (error) {

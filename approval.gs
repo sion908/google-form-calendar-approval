@@ -125,6 +125,21 @@ function approveEvent(row) {
       throw new Error(calendarResult.message);
     }
     
+    // デバッグ用にカレンダー結果をログに出力
+    console.log('Calendar event creation result:', {
+      success: calendarResult.success,
+      eventId: calendarResult.eventId,
+      eventUrl: calendarResult.eventUrl,
+      calendarName: calendarResult.calendarName,
+      hasEventObject: !!calendarResult.event
+    });
+    
+    if (!calendarResult.eventUrl) {
+      // イベントURLが取得できない場合は、イベントIDからURLを構築
+      calendarResult.eventUrl = `https://calendar.google.com/calendar/event?eid=${encodeURIComponent(calendarResult.eventId)}&ctz=Asia/Tokyo`;
+      console.log('Constructed event URL:', calendarResult.eventUrl);
+    }
+    
     // スプレッドシートを更新
     sheet.getRange(row, COLUMNS.STATUS + 1).setValue(STATUS.APPROVED);
     sheet.getRange(row, COLUMNS.PROCESSED_AT + 1).setValue(new Date());
