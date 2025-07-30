@@ -190,29 +190,86 @@ function deleteCalendarEvent(eventId) {
  */
 function hasEventInTimeRange(startTime, endTime, excludeEventId = '') {
   try {
-    const calendarId = getCalendarId();
-    const calendar = CalendarApp.getCalendarById(calendarId);
+    let calendar;
+    try {
+      const calendarId = getCalendarId();
+      calendar = CalendarApp.getCalendarById(calendarId);
+    } catch (e) {
+      // カレンダーIDが設定されていない場合はデフォルトカレンダーを使用
+      calendar = CalendarApp.getDefaultCalendar();
+    }
     
     if (!calendar) {
-      throw new Error('カレンダーが見つかりません。カレンダーIDを確認してください。');
+      throw new Error('カレンダーが見つかりません。');
     }
 
     const events = calendar.getEvents(new Date(startTime), new Date(endTime));
     
-    // 指定された時間帯に他のイベントがあるか確認
-    for (const event of events) {
-      const eventId = event.getId().replace('@google.com', '');
-      // 除外するイベントIDでない場合、かつ時間が重なっているか確認
-      if (eventId !== excludeEventId && 
-          event.getStartTime() < new Date(endTime) && 
-          event.getEndTime() > new Date(startTime)) {
-        return true;
+    // 除外するイベントIDを除いて、期間内にイベントがあるかチェック
+    return events.some(event => {
+      // 除外するイベントIDの場合はスキップ
+      if (excludeEventId && event.getId().replace(/@.*$/, '') === excludeEventId) {
+        return false;
       }
+      
+      // イベントの開始時刻と終了時刻を取得
+      const eventStart = event.getStartTime();
+      const eventEnd = event.getEndTime();
+      
+      // イベントが指定期間と重なっているかチェック
+      return (eventStart < endTime && eventEnd > startTime);
+    });
+  } catch (error) {
+    console.error('予定の確認中にエラーが発生しました:', error);
+    throw error;
+  }
+}
+
+/**
+ * 指定された期間のカレンダー予定を取得する
+ * @param {Date} startDate - 開始日時
+ * @param {Date} endDate - 終了日時
+ * @param {string} [excludeEventId] - 除外するイベントID
+ * @return {Array<Object>} 予定の配列
+ */
+function getCalendarEvents(startDate, endDate, excludeEventId = '') {
+  try {
+    let calendar;
+    try {
+      const calendarId = getCalendarId();
+      calendar = CalendarApp.getCalendarById(calendarId);
+    } catch (e) {
+      // カレンダーIDが設定されていない場合はデフォルトカレンダーを使用
+      calendar = CalendarApp.getDefaultCalendar();
     }
     
-    return false;
+    if (!calendar) {
+      throw new Error('カレンダーが見つかりません。');
+    }
+
+    const events = calendar.getEvents(new Date(startDate), new Date(endDate));
+    
+    return events
+      .filter(event => {
+        // 除外するイベントIDの場合はスキップ
+        if (excludeEventId && event.getId().replace(/@.*$/, '') === excludeEventId) {
+          return false;
+        }
+        return true;
+      })
+      .map(event => ({
+        title: event.getTitle(),
+        startTime: event.getStartTime(),
+        endTime: event.getEndTime(),
+        isAllDay: event.isAllDayEvent(),
+        description: event.getDescription() || '',
+        location: event.getLocation() || '',
+        guests: event.getGuestList().map(guest => guest.getEmail()).join(', ')
+      }))
+      .sort((a, b) => a.startTime - b.startTime); // 開始時刻でソート
+      
   } catch (error) {
-    console.error('イベントの重複チェック中にエラーが発生しました:', error);
-    throw error; // 呼び出し元で適切に処理する
+    console.error('予定の取得中にエラーが発生しました:', error);
+    return [];
   }
 }

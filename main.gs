@@ -175,11 +175,16 @@ function handleRejectAction(row) {
   // テンプレートに渡すデータを準備
   const template = HtmlService.createTemplateFromFile('rejection_form_template');
   
+  // 日付と時刻を組み合わせる
+  const startDate = combineDateTime(data[COLUMNS.EVENT_DATE], data[COLUMNS.START_TIME]);
+  const endDate = combineDateTime(data[COLUMNS.EVENT_DATE], data[COLUMNS.END_TIME]);
+  
   // テンプレート変数を設定
   const templateVars = {
     eventTitle: data[COLUMNS.EVENT_TITLE] || '（タイトルなし）',
-    eventDate: formatDateTime(data[COLUMNS.START_TIME]) + ' 〜 ' + formatDateTime(data[COLUMNS.END_TIME]),
-    applicantEmail: data[COLUMNS.APPLICANT_EMAIL] || '（メールアドレスなし）',
+    eventDate: (startDate ? formatDateTime(startDate) : '日時未設定') + ' 〜 ' + 
+               (endDate ? formatDateTime(endDate) : '日時未設定'),
+    applicantEmail: data[COLUMNS.EMAIL] || '（メールアドレスなし）',
     row: row
   };
   
@@ -200,35 +205,183 @@ function handleRejectAction(row) {
  * @return {GoogleAppsScript.HTML.HtmlOutput} HTMLレスポンス
  */
 function handleRejectSubmit(row, rejectionReason) {
-  if (!row || isNaN(row) || !rejectionReason) {
-    return createErrorResponse('無効なリクエストパラメータです。', 400);
-  }
-  
-  const result = rejectEvent(row, rejectionReason);
-  
-  if (result.success) {
-    return HtmlService.createHtmlOutput(`
+  try {
+    if (!row || isNaN(row) || !rejectionReason) {
+      throw new Error('無効なリクエストパラメータです。');
+    }
+    
+    const result = rejectEvent(Number(row), rejectionReason);
+    
+    if (result.success) {
+      const htmlOutput = HtmlService.createHtmlOutput(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <base target="_top">
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>予定を拒否しました</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                line-height: 1.6; 
+                max-width: 600px; 
+                margin: 0 auto; 
+                padding: 20px; 
+                color: #333;
+              }
+              .success { 
+                color: #155724; 
+                background-color: #d4edda; 
+                border: 1px solid #c3e6cb; 
+                padding: 15px; 
+                border-radius: 4px; 
+                margin: 20px 0;
+              }
+              .error {
+                color: #721c24;
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                padding: 15px;
+                border-radius: 4px;
+                margin: 20px 0;
+              }
+              .btn {
+                display: inline-block;
+                padding: 8px 16px;
+                background-color: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+              }
+              .btn:hover {
+                background-color: #0069d9;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>予定を拒否しました</h1>
+            <div class="success">
+              <p>予定の拒否が完了しました。申請者に通知が送信されました。</p>
+              <p>このウィンドウは閉じても問題ありません。</p>
+            </div>
+            <p><a href="#" class="btn" onclick="window.close(); return false;">ウィンドウを閉じる</a></p>
+          </body>
+        </html>
+      `);
+      
+      return htmlOutput;
+    } else {
+      const htmlOutput = HtmlService.createHtmlOutput(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <base target="_top">
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>予定を拒否しました</title>
+            <style>
+              body { 
+                font-family: Arial, sans-serif; 
+                line-height: 1.6; 
+                max-width: 600px; 
+                margin: 0 auto; 
+                padding: 20px; 
+                color: #333;
+              }
+              .error {
+                color: #721c24;
+                background-color: #f8d7da;
+                border: 1px solid #f5c6cb;
+                padding: 15px;
+                border-radius: 4px;
+                margin: 20px 0;
+              }
+              .btn {
+                display: inline-block;
+                padding: 8px 16px;
+                background-color: #007bff;
+                color: white;
+                text-decoration: none;
+                border-radius: 4px;
+                border: none;
+                cursor: pointer;
+                font-size: 14px;
+              }
+              .btn:hover {
+                background-color: #0069d9;
+              }
+            </style>
+          </head>
+          <body>
+            <h1>予定を拒否しました</h1>
+            <div class="error">
+              <p>予定の拒否に失敗しました。${result.message}</p>
+            </div>
+            <p><a href="#" class="btn" onclick="window.close(); return false;">ウィンドウを閉じる</a></p>
+          </body>
+        </html>
+      `);
+      
+      return htmlOutput;
+    }
+  } catch (error) {
+    console.error('拒否処理中にエラーが発生しました:', error);
+    const htmlOutput = HtmlService.createHtmlOutput(`
       <!DOCTYPE html>
       <html>
         <head>
           <base target="_top">
           <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>予定を拒否しました</title>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .info { color: #0c5460; background-color: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 4px; }
+            body { 
+              font-family: Arial, sans-serif; 
+              line-height: 1.6; 
+              max-width: 600px; 
+              margin: 0 auto; 
+              padding: 20px; 
+              color: #333;
+            }
+            .error {
+              color: #721c24;
+              background-color: #f8d7da;
+              border: 1px solid #f5c6cb;
+              padding: 15px;
+              border-radius: 4px;
+              margin: 20px 0;
+            }
+            .btn {
+              display: inline-block;
+              padding: 8px 16px;
+              background-color: #007bff;
+              color: white;
+              text-decoration: none;
+              border-radius: 4px;
+              border: none;
+              cursor: pointer;
+              font-size: 14px;
+            }
+            .btn:hover {
+              background-color: #0069d9;
+            }
           </style>
         </head>
         <body>
-          <div class="info">
-            <h2>⛔ 予定を拒否しました</h2>
-            <p>申請者に通知が送信されました。</p>
+          <h1>予定を拒否しました</h1>
+          <div class="error">
+            <p>予定の拒否に失敗しました。${error.message}</p>
           </div>
+          <p><a href="#" class="btn" onclick="window.close(); return false;">ウィンドウを閉じる</a></p>
         </body>
       </html>
     `);
-  } else {
-    return createErrorResponse(result.message, 500);
+    
+    return htmlOutput;
   }
 }
 

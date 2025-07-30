@@ -76,6 +76,32 @@ ${eventData.flyerUrl}
 ` 
       : '';
     
+    // 前後1日の予定を取得
+    const oneDayBefore = new Date(eventData.startTime);
+    oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+    oneDayBefore.setHours(0, 0, 0, 0);
+    
+    const oneDayAfter = new Date(eventData.endTime);
+    oneDayAfter.setDate(oneDayAfter.getDate() + 1);
+    oneDayAfter.setHours(23, 59, 59, 999);
+    
+    // カレンダーから予定を取得
+    const events = getCalendarEvents(oneDayBefore, oneDayAfter);
+    
+    // 前後1日の予定を整形（タイトルと時間のみ）
+    let eventsText = '【前後1日の予定】\n';
+    if (events.length > 0) {
+      events.forEach(event => {
+        const startTime = formatDateTime(event.startTime);
+        const endTime = formatDateTime(event.endTime);
+        const timeRange = event.isAllDay ? '（終日）' : `${startTime} 〜 ${endTime}`;
+        
+        eventsText += `・${event.title} ${timeRange}\n`;
+      });
+    } else {
+      eventsText += '前後1日に予定はありません。\n';
+    }
+    
     const body = `
 以下の予定登録の承認をお願いします。
 
@@ -85,26 +111,28 @@ ${eventData.title}
 【日時】
 ${formatDateTime(eventData.startTime)} 〜 ${formatDateTime(eventData.endTime)}
 
+【場所】
+${eventData.location || '未設定'}
+
 【イベント内容】
-${eventData.eventDetails || '特になし'}
+${eventData.eventDetails || '未設定'}
 
-【申請者情報】
-・氏名: ${eventData.applicantName}
-・メール: ${eventData.applicantEmail}
-・所属: ${eventData.affiliation || '未設定'}
-・参加予定人数: ${eventData.participantCount || '未設定'}名
+【申請者】
+${eventData.applicantName} (${eventData.applicantEmail})
+${eventData.affiliation ? `【所属】\n${eventData.affiliation}\n` : ''}
+【参加予定人数】
+${eventData.participantCount || '未設定'}名
 
-【備考】
-${eventData.notes || '特になし'}
-
+${eventData.notes ? `【備考】\n${eventData.notes}\n` : ''}
 ${flyerText}
+${eventsText}
+
 以下のリンクから承認または拒否を行ってください。
 
-✅ 承認する: ${approvalUrl}
-❌ 拒否する: ${rejectionUrl}
+✅ 承認: ${approvalUrl}
+❌ 拒否: ${rejectionUrl}
 
-※このリンクは30日間有効です。
-`;
+※このメールに心当たりのない場合は、このメールを破棄してください。`;
 
     GmailApp.sendEmail(approverEmail, subject, body, {
       name: 'カレンダー承認システム',
@@ -218,28 +246,4 @@ ${editUrl}
     console.error('拒否通知メールの送信中にエラーが発生しました:', error);
     return { success: false, message: `メール送信エラー: ${error.message}` };
   }
-}
-
-/**
- * 日時をフォーマットする
- * @param {Date} date - フォーマットする日時
- * @return {string} フォーマットされた日時文字列
- */
-function formatDateTime(date) {
-  if (!(date instanceof Date)) {
-    date = new Date(date);
-  }
-  
-  // 日本時間に変換
-  const options = {
-    timeZone: 'Asia/Tokyo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  };
-  
-  return date.toLocaleString('ja-JP', options);
 }
